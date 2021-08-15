@@ -1,0 +1,60 @@
+---
+- hosts: webservers
+  become: yes
+  vars:
+    debug:
+    - msg: "webservers"
+  
+  tasks:
+    - name: installing Nginx service
+      apt: 
+        name: nginx
+        state: latest
+        update_cache: yes
+    
+    - name: Nginx server started
+      service:
+        name: nginx
+        state: started
+
+    - name: installed php and php-fpm
+      apt: 
+        name: ['php', 'php-fpm']
+        update_cache:  yes 
+        state: latest
+
+    - name: copying nginx configuration file to servers 
+      copy: dest=/etc/nginx/sites-available/default
+            src=./default
+
+    - name: copying php index configurationfile
+      copy: dest=/var/www/html/index.php
+            src=./index.php
+
+    - name: restarted nginx server
+      service:
+        name: nginx
+        state: restarted
+
+- hosts: haproxy
+  become: yes
+  vars:
+    Mymessage: "loadbalancer for web servers"
+    algorithm:  roundrobin
+    haproxy_host_ipv4_address: "{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}"
+  tasks:
+    - name: installing HAProxy
+      become: yes 
+      apt: 
+        name: haproxy 
+        state:  present
+    
+    - name: configuring haproxy
+      template:
+        src:  haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+    - name: restarted haproxy
+      service:  
+        name: haproxy
+        state: restarted
+    
